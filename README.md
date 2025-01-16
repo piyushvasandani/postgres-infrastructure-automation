@@ -22,6 +22,7 @@ This project automates the deployment of PostgreSQL infrastructure on AWS, utili
   "instance_type": "t3.large",
   "num_replicas": 3
 }
+```
 
 
 ### 2. `/apply`
