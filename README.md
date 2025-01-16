@@ -32,3 +32,18 @@ This project automates the deployment of PostgreSQL infrastructure on AWS, utili
 #### Parameters:
 {}
 
+### 3. `/apply_ansible_configuration`
+**Method:** `POST`
+**Description:** 
+This API generates the Ansible inventory file and playbook based on the Terraform outputs (the IP addresses of the primary and replica PostgreSQL instances). It also modifies the docker-compose.yml and postgresql.conf files to configure PostgreSQL containers based on the input parameters.
+
+This step automates the configuration of PostgreSQL for replication and scaling. The API ensures that both the primary and replica PostgreSQL servers are correctly configured for Docker deployment with the appropriate environment settings.
+
+Step 1: Ansible inventory file is generated using the Terraform output (primary and replica instance IP addresses).
+Step 2: The docker-compose.yml and postgresql.conf files are updated with user-defined values for the Docker image, maximum connections, and shared buffers.
+
+#### Parameters:
+- `image_tag`: (optional)  The Docker image tag for PostgreSQL. Default is `postgres:14-alpine`.
+- `shared_buffers`: (optional) The shared buffers size for PostgreSQL. Default is `128MB`.
+- `max_connection`: (optional)  The maximum number of PostgreSQL connections.Default is `200`.
+
