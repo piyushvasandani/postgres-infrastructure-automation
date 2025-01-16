@@ -1,0 +1,19 @@
+version: '3.7'
+
+services:
+  postgresql-master:
+    image: bitnami/postgresql:DEVOPS_IMAGE_TAG
+    container_name: postgresql-master
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_USERNAME=my_user
+      - POSTGRESQL_PASSWORD=password123
+      - POSTGRESQL_DATABASE=my_database
+      - POSTGRESQL_REPLICATION_USER=my_repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=my_repl_password
+    volumes:
+      - ./postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
+    ports:
+      - "5432:5432"
+    network_mode: host
+    restart: always
