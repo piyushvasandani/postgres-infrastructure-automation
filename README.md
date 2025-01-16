@@ -22,3 +22,12 @@ This project automates the deployment of PostgreSQL infrastructure on AWS, utili
   "instance_type": "t3.large",
   "num_replicas": 3
 }
+
+
+### 2. `/apply`
+**Method:** `POST`
+**Description:** This API applies the generated Terraform configurations. It runs the terraform init and terraform apply commands to provision the infrastructure on AWS. This step creates the EC2 instances for the PostgreSQL primary and replica servers, along with associated resources.
+
+#### Parameters:
+{}
+
