@@ -55,3 +55,9 @@ This step automates the configuration of PostgreSQL for replication and scaling.
   "shared_buffers": "256MB"
 }
 ```
+
+
+```
+docker run -d -p 5000:5000 -e AWS_ACCESS_KEY_ID="YOUR_AWS_ACCESS_KEY" -e AWS_SECRET_ACCESS_KEY="YOUR_AWS_SECRET_ACESS_KEY" -e AWS_DEFAULT_REGION="us-east-1" piyushvasandani/postgresql-replication
+
+```
