@@ -8,7 +8,6 @@ app = Flask(__name__)
 # Paths for generated files
 TERRAFORM_DIR = "terraform_configs"
 ANSIBLE_DIR = "ansible_configs"
-
 @app.route("/generate", methods=["POST"])
 def generate_configs():
     """
@@ -142,11 +141,11 @@ def apply_ansible_configuration():
         with open("/app/primary/docker-compose.yml", "w") as file:
             file.write(updated_content)
 
-        with open("/app/primary/postgresql.conf","r") as file:
+        with open("/app/primary/docker-compose.yml","r") as file:
             file_content=file.read()
         updated_content= file_content.replace("DEVOPS_MAX_CONNECTIONS",postgres_max_connection)
         updated_content=updated_content.replace("DEVOPS_SHARED_BUFFERS",postgres_shared_buffers)
-        with open("/app/primary/postgresql.conf","w") as file:
+        with open("/app/primary/docker-compose.yml","w") as file:
             file.write(updated_content)
 
     except Exception as e:
@@ -154,27 +153,36 @@ def apply_ansible_configuration():
 
    
     try:
-        with open("/app/replicas/docker-compose.yml", "r") as file:
+        with open("/app/replicas/docker-compose.yml.j2", "r") as file:
             file_content = file.read()
         updated_content = file_content.replace("DEVOPS_IMAGE_TAG", postgres_image_tag)
         updated_content = updated_content.replace("DEVOPS_PRIMARY_HOST", primary_instance_private_ip)
-        with open("/app/replicas/docker-compose.yml", "w") as file:
+        with open("/app/replicas/docker-compose.yml.j2", "w") as file:
             file.write(updated_content)
 
-        with open("/app/replicas/postgresql.conf","r") as file:
+        with open("/app/replicas/docker-compose.yml.j2","r") as file:
             file_content=file.read()
         updated_content= file_content.replace("DEVOPS_MAX_CONNECTIONS",postgres_max_connection)
         updated_content=updated_content.replace("DEVOPS_SHARED_BUFFERS",postgres_shared_buffers)
-        with open("/app/replicas/postgresql.conf","w") as file:
+        with open("/app/replicas/docker-compose.yml.j2","w") as file:
             file.write(updated_content)
           
     except Exception as e:
         return jsonify({"error": f"Something went wrong while modifying replica configurations: {str(e)}"}), 500
 
     # Define paths for primary and replica docker-compose.yml
-    primary_source_path = '../primary/'
-    replica_source_path = '../replicas/'
+    primary_source_path = '/app/primary/'
+    replica_source_path = '/app/replicas/docker-compose.yml.j2'
     common_dest_path = '/tmp/'  # Common destination path
+    sql_script="create user replicator with replication encrypted password 'replicator_password';\n"
+
+    for ip in replica_ips:
+        ip = ip.replace(".", "_")
+        replication_slot = f"select pg_create_physical_replication_slot('replication_slot_{ip}');\n"
+        sql_script=sql_script + replication_slot
+    with open("/app/primary/00_init.sql","w") as file:
+        file.write(sql_script)
+
 
     # Ansible playbook structure
     playbook = """
@@ -201,7 +209,7 @@ def apply_ansible_configuration():
   become: true
   tasks:
     - name: Copy docker-compose file for replica
-      copy:
+      template:
         src: {replica_source}
         dest: {common_dest}
 
@@ -209,7 +217,7 @@ def apply_ansible_configuration():
       shell: |
         cd /tmp/
         sudo chmod -R 777 /tmp/
-        sudo docker compose up -d
+        sudo docker compose -f docker-compose.yml.j2 up -d
       args:
         chdir: /tmp/
 """.format(
@@ -230,6 +238,7 @@ def apply_ansible_configuration():
     try:
         os.chdir(ANSIBLE_DIR)
         subprocess.check_output(["ansible-playbook", "-i", "inventory.txt", "playbook.yml", "--ssh-extra-args=-o StrictHostKeyChecking=no"])
+        os.chdir("../")
         return jsonify({"message": "Applied ansible playbook successfully postgres is now enabled in replication mode"})
     except subprocess.CalledProcessError as e:
         return jsonify({"error": f"Ansible error: {e.output.decode()}"}), 500

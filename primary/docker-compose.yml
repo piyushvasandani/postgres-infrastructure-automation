@@ -1,19 +1,33 @@
-version: '3.7'
+version: '3.8'
+x-postgres-common:
+  &postgres-common
+  image: postgres:DEVOPS_IMAGE_TAG
+  user: postgres
+  restart: always
+  healthcheck:
+    test: 'pg_isready -U user --dbname=postgres'
+    interval: 10s
+    timeout: 5s
+    retries: 5
 
 services:
-  postgresql-master:
-    image: bitnami/postgresql:DEVOPS_IMAGE_TAG
-    container_name: postgresql-master
+  postgres_primary:
+    <<: *postgres-common
+    network_mode: "host"
     environment:
-      - POSTGRESQL_REPLICATION_MODE=master
-      - POSTGRESQL_USERNAME=my_user
-      - POSTGRESQL_PASSWORD=password123
-      - POSTGRESQL_DATABASE=my_database
-      - POSTGRESQL_REPLICATION_USER=my_repl_user
-      - POSTGRESQL_REPLICATION_PASSWORD=my_repl_password
+      POSTGRES_USER: user
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256\nhost replication all 0.0.0.0/0 md5"
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    command: |
+      postgres
+      -c wal_level=replica
+      -c hot_standby=on
+      -c max_wal_senders=10
+      -c max_replication_slots=10
+      -c hot_standby_feedback=on
+      -c shared_buffers=DEVOPS_SHARED_BUFFERS
+      -c max_connections=DEVOPS_MAX_CONNECTIONS
     volumes:
-      - ./postgresql.conf:/opt/bitnami/postgresql/conf/postgresql.conf
-    ports:
-      - "5432:5432"
-    network_mode: host
-    restart: always
+      - ./00_init.sql:/docker-entrypoint-initdb.d/00_init.sql
