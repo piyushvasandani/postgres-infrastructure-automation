@@ -93,6 +93,7 @@ def apply_terraform():
         os.chdir("../")
         return jsonify({"message": "Infrastructure created successfully."})
     except subprocess.CalledProcessError as e:
+        os.chdir("../")
         return jsonify({"error": f"Terraform error: {e.output.decode()}"}), 500
 
 @app.route("/apply_ansible_configuration", methods=["POST"])
